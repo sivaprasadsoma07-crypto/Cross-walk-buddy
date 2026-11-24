@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crosswalk Buddy — Easy Road Safety Game</title>
+<style>
+  :root {
+    --bg-sky: linear-gradient(180deg, #e0f2fe 0%, #f0fdf4 100%);
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #475569;
+    --go: #16a34a;
+    --stop: #dc2626;
+    --walk: #d97706;
+    --road: #334155;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    background: var(--bg-sky);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  /* Soft Aesthetic Header */
+  .header {
+    width: 100%;
+    max-width: 760px;
+    background: var(--card);
+    border-radius: 24px;
+    padding: 14px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .brand {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #0f172a;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  .badge {
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
+  .badge.score { background: #dcfce7; color: #166534; }
+  .badge.hearts { background: #ffe4e6; color: #9f1239; }
+
+  /* Clear Signal Banner */
+  .signal-card {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 12px;
+    background: var(--card);
+    border-radius: 22px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  .signal-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .light-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--go);
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.5);
+  }
+
+  .light-dot.stop {
+    background: var(--stop);
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
+  }
+
+  .light-dot.walk {
+    background: var(--walk);
+    box-shadow: 0 0 12px rgba(217, 119, 6, 0.5);
+  }
+
+  .signal-help {
+    font-size: 0.86rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  /* Simple 2-Lane Street Canvas */
+  .street-box {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 12px;
+    background: var(--card);
+    border-radius: 28px;
+    padding: 12px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+  }
+
+  canvas {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 736 / 340;
+    border-radius: 20px;
+    display: block;
+    cursor: pointer;
+  }
+
+  /* Just 2 Big Friendly Buttons */
+  .big-actions {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .big-btn {
+    border: none;
+    border-radius: 22px;
+    padding: 16px 18px;
+    font-size: 1.05rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+    transition: transform 0.14s ease, filter 0.14s ease;
+  }
+
+  .big-btn:hover { transform: translateY(-2px); filter: brightness(1.03); }
+  .big-btn:active { transform: scale(0.98); }
+
+  .btn-light {
+    background: #16a34a;
+    color: #ffffff;
+  }
+
+  .btn-walk {
+    background: #f59e0b;
+    color: #0f172a;
+  }
+
+  /* Gentle Tip Footer */
+  .note-box {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 18px;
+    padding: 11px 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+  }
+
+  /* Start / End Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 30;
+  }
+
+  .modal {
+    background: #ffffff;
+    border-radius: 28px;
+    padding: 30px 24px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.25);
+  }
+
+  .modal h1 { font-size: 1.75rem; color: #0f172a; margin-bottom: 10px; }
+  .modal p { color: #475569; line-height: 1.55; margin-bottom: 20px; font-size: 0.96rem; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .start-btn {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 13px 28px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .start-btn.gray { background: #e2e8f0; color: #0f172a; }
+
+  @media (max-width: 560px) {
+    .big-actions { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">🚦 Crosswalk Buddy</div>
+    <div class="badges">
+      <div class="badge score">⭐ Score: <span id="scoreEl">0</span></div>
+      <div class="badge hearts">❤️ <span id="heartsEl">5</span></div>
+      <div class="badge">⏱️ <span id="timeEl">45</span>s</div>
+    </div>
+  </div>
+
+  <div class="signal-card">
+    <div class="signal-status">
+      <span class="light-dot" id="lightDot"></span>
+      <span id="statusText">CARS GO — Walkers Wait</span>
+    </div>
+    <div class="signal-help" id="statusSub">Tap "Switch Light" when a walker reaches the zebra crossing!</div>
+  </div>
+
+  <div class="street-box">
+    <canvas id="streetCanvas" width="736" height="340"></canvas>
+  </div>
+
+  <div class="big-actions">
+    <button class="big-btn btn-light" onclick="toggleLight()">🚦 Switch Light (Space)</button>
+    <button class="big-btn btn-walk" onclick="callWalker()">🚶 Send Walker (W)</button>
+  </div>
+
+  <div class="note-box" id="noteBox">
+    Simple Rule: <strong>Green Light</strong> = Cars move, walkers wait. <strong>Red Light</strong> = Cars stop, walkers cross safely!
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modalBox">
+      <h1>🚦 Crosswalk Buddy</h1>
+      <p>Keep cars and walkers safe on one easy street!<br><br>
+      1. Tap <strong>Switch Light</strong> to turn cars <strong>RED</strong> so walkers can cross.<br>
+      2. Switch back to <strong>GREEN</strong> so cars keep moving!</p>
+      <div class="btn-row">
+        <button class="start-btn" onclick="startGame()">Play Now</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById("streetCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const W = 736;
+  const H = 340;
+  const CROSS_X = 368;
+  const ROAD_TOP = 110;
+  const ROAD_BOT = 230;
+
+  let lightState = "GREEN"; // "GREEN" (cars go) or "RED" (cars stop, walkers cross)
+  let cars = [];
+  let walkers = [];
+  let score = 0, hearts = 5, timeLeft = 45;
+  let running = false, lastTs = 0, carTimer = 0, walkerTimer = 0, clockInterval = null;
+
+  function chime(freq, dur = 0.12) {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.06, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + dur);
+    } catch (_) {}
+  }
+
+  canvas.addEventListener("click", () => {
+    if (running) toggleLight();
+  });
+
+  window.addEventListener("keydown", e => {
+    if (!running) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      toggleLight();
+    } else if (e.key.toLowerCase() === "w") {
+      callWalker();
+    }
+  });
+
+  function startGame() {
+    lightState = "GREEN";
+    cars = [];
+    walkers = [];
+    score = 0;
+    hearts = 5;
+    timeLeft = 45;
+    running = true;
+    carTimer = 1100;
+    walkerTimer = 1400;
+    lastTs = performance.now();
+
+    document.getElementById("overlay").style.display = "none";
+    updateUI();
+
+    clearInterval(clockInterval);
+    clockInterval = setInterval(() => {
+      if (!running) return;
+      timeLeft--;
+      updateUI();
+      if (timeLeft <= 0) finishGame("🎉 Great Job!");
+    }, 1000);
+
+    spawnCar();
+    spawnWalker();
+    requestAnimationFrame(loop);
+  }
+
+  function toggleLight() {
+    if (!running) return;
+    lightState = lightState === "GREEN" ? "RED" : "GREEN";
+    chime(lightState === "RED" ? 540 : 660, 0.1);
+    updateUI();
+  }
+
+  function callWalker() {
+    if (!running) return;
+    spawnWalker();
+    chime(500, 0.08);
+  }
+
+  function spawnCar() {
+    // Top lane goes left-to-right; bottom lane goes right-to-left
+    const topLane = Math.random() < 0.5;
+    const isAmbulance = Math.random() < 0.2;
+    const y = topLane ? 142 : 198;
+    const vx = topLane ? 145 : -145;
+    const x = topLane ? -45 : W + 45;
+    const color = isAmbulance ? "#ffffff" : (topLane ? "#38bdf8" : "#a78bfa");
+    cars.push({ x, y, vx, w: 54, h: 28, color, isAmbulance, topLane });
+  }
+
+  function spawnWalker() {
+    if (walkers.length >= 3) return;
+    const fromTop = Math.random() < 0.5;
+    const x = CROSS_X + (Math.random() * 44 - 22);
+    const y = fromTop ? ROAD_TOP - 22 : ROAD_BOT + 22;
+    const vy = fromTop ? 62 : -62;
+    walkers.push({ x, y, vy, r: 11, fromTop, waiting: true });
+  }
+
+  function carShouldStop(car) {
+    if (lightState !== "RED") return false;
+    const stopLine = car.topLane ? CROSS_X - 58 : CROSS_X + 58;
+    if (car.topLane && car.x < stopLine && car.x > stopLine - 65) return true;
+    if (!car.topLane && car.x > stopLine && car.x < stopLine + 65) return true;
+    return false;
+  }
+
+  function loop(ts) {
+    if (!running) return;
+    const dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    carTimer += dt * 1000;
+    if (carTimer >= 1650 && cars.length < 6) {
+      carTimer = 0;
+      spawnCar();
+    }
+
+    walkerTimer += dt * 1000;
+    if (walkerTimer >= 3600) {
+      walkerTimer = 0;
+      spawnWalker();
+    }
+
+    // Move cars
+    for (let i = cars.length - 1; i >= 0; i--) {
+      const c = cars[i];
+      if (!carShouldStop(c)) {
+        c.x += c.vx * dt;
+      }
+
+      // Check hit with active crossing walker
+      for (let w = walkers.length - 1; w >= 0; w--) {
+        const wk = walkers[w];
+        if (!wk.waiting && Math.abs(c.x - wk.x) < 30 && Math.abs(c.y - wk.y) < 20) {
+          walkers.splice(w, 1);
+          hearts--;
+          chime(180, 0.22);
+          setNote("⚠️ Oops! Turn the light RED so walkers can cross safely!");
+          updateUI();
+          if (hearts <= 0) {
+            finishGame("💛 Out of Hearts!");
+            return;
+          }
+        }
+      }
+
+      if (c.x < -80 || c.x > W + 80) {
+        cars.splice(i, 1);
+        score += c.isAmbulance ? 20 : 10;
+        updateUI();
+      }
+    }
+
+    // Move walkers only when light is RED
+    for (let w = walkers.length - 1; w >= 0; w--) {
+      const wk = walkers[w];
+      if (lightState === "RED") {
+        wk.waiting = false;
+        wk.y += wk.vy * dt;
+      } else {
+        // Hold safely at sidewalk edge
+        const edgeY = wk.fromTop ? ROAD_TOP - 18 : ROAD_BOT + 18;
+        if (Math.abs(wk.y - edgeY) > 3) {
+          wk.waiting = false;
+          wk.y += wk.vy * dt;
+        } else {
+          wk.waiting = true;
+        }
+      }
+
+      const reachedOtherSide = wk.fromTop ? wk.y > ROAD_BOT + 20 : wk.y < ROAD_TOP - 20;
+      if (reachedOtherSide) {
+        walkers.splice(w, 1);
+        score += 15;
+        chime(720, 0.1);
+        setNote("✅ Safe crossing! +15 points.");
+        updateUI();
+      }
+    }
+
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Top & bottom sidewalks
+    ctx.fillStyle = "#bbf7d0";
+    ctx.fillRect(0, 0, W, ROAD_TOP);
+    ctx.fillRect(0, ROAD_BOT, W, H - ROAD_BOT);
+
+    // Road
+    ctx.fillStyle = "#334155";
+    ctx.fillRect(0, ROAD_TOP, W, ROAD_BOT - ROAD_TOP);
+
+    // Center dashed line
+    ctx.strokeStyle = "#fde047";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 14]);
+    ctx.beginPath();
+    ctx.moveTo(0, (ROAD_TOP + ROAD_BOT) / 2);
+    ctx.lineTo(W, (ROAD_TOP + ROAD_BOT) / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Zebra crosswalk
+    ctx.fillStyle = "#ffffff";
+    for (let y = ROAD_TOP + 10; y < ROAD_BOT - 12; y += 22) {
+      ctx.fillRect(CROSS_X - 36, y, 72, 12);
+    }
+
+    // Cars
+    for (const c of cars) {
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.roundRect(c.x - c.w / 2, c.y - c.h / 2, c.w, c.h, 8);
+      ctx.fill();
+
+      if (c.isAmbulance) {
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(c.x - 3, c.y - 8, 6, 16);
+        ctx.fillRect(c.x - 8, c.y - 3, 16, 6);
+      }
+    }
+
+    // Walkers
+    for (const wk of walkers) {
+      ctx.fillStyle = wk.waiting ? "#f59e0b" : "#16a34a";
+      ctx.beginPath();
+      ctx.arc(wk.x, wk.y, wk.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+  }
+
+  function setNote(txt) {
+    document.getElementById("noteBox").textContent = txt;
+  }
+
+  function updateUI() {
+    document.getElementById("scoreEl").textContent = score;
+    document.getElementById("heartsEl").textContent = Math.max(0, hearts);
+    document.getElementById("timeEl").textContent = Math.max(0, timeLeft);
+
+    const dot = document.getElementById("lightDot");
+    const status = document.getElementById("statusText");
+    const sub = document.getElementById("statusSub");
+
+    if (lightState === "GREEN") {
+      dot.className = "light-dot";
+      status.textContent = "GREEN LIGHT — Cars Go";
+      sub.textContent = "Walkers wait at the curb. Switch to RED when walkers are ready!";
+    } else {
+      dot.className = "light-dot stop";
+      status.textContent = "RED LIGHT — Walkers Cross!";
+      sub.textContent = "Cars pause at the line. Switch back to GREEN once walkers finish!";
+    }
+  }
+
+  function copyScore() {
+    const msg = `🚦 I scored ${score} pts in Crosswalk Buddy! Try keeping the street safe too!`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(msg).then(() => {
+        alert("Score copied! Share this message with your friends.");
+      });
+    } else {
+      alert(msg);
+    }
+  }
+
+  function finishGame(heading) {
+    running = false;
+    clearInterval(clockInterval);
+    const overlay = document.getElementById("overlay");
+    const modal = document.getElementById("modalBox");
+    overlay.style.display = "flex";
+    modal.innerHTML = `
+      <h1>${heading}</h1>
+      <p>Your Score: <strong>${score} pts</strong></p>
+      <div class="btn-row">
+        <button class="start-btn" onclick="startGame()">Play Again</button>
+        <button class="start-btn gray" onclick="copyScore()">Copy Score</button>
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>
